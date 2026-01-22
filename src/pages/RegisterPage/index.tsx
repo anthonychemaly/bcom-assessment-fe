@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   TextInput,
   PasswordInput,
@@ -56,17 +56,9 @@ function getPasswordStrength(password: string): { strength: number; label: strin
 }
 
 export function RegisterPage() {
-  const { register, isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
+  const { register } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, isLoading, navigate]);
 
   const form = useForm({
     initialValues: {

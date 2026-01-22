@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   TextInput,
   PasswordInput,
@@ -28,15 +28,7 @@ const loginSchema = Yup.object({
 });
 
 export function LoginPage() {
-  const { login, isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, isLoading, navigate]);
+  const { login } = useAuth();
 
   const form = useForm({
     initialValues: {
