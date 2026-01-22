@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   TextInput,
@@ -21,8 +21,7 @@ import {
   IconMail,
   IconCheck,
 } from '@tabler/icons-react';
-import { useRegister } from '../../hooks';
-import { AuthService } from '../../network';
+import { useAuth } from '../../contexts/AuthContext';
 import { AuthLayout } from '../../layouts';
 import styles from './styles.module.scss';
 
@@ -57,15 +56,17 @@ function getPasswordStrength(password: string): { strength: number; label: strin
 }
 
 export function RegisterPage() {
+  const { register, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-  const registerMutation = useRegister();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (AuthService.isAuthenticated()) {
-      navigate('/dashboard');
+    if (!isLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
 
   const form = useForm({
     initialValues: {
@@ -92,9 +93,17 @@ export function RegisterPage() {
     },
   });
 
-  const handleSubmit = form.onSubmit((values) => {
+  const handleSubmit = form.onSubmit(async (values) => {
     const { confirmPassword, ...registerData } = values;
-    registerMutation.mutate(registerData);
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await register(registerData);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Failed to create account. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   });
 
   const passwordStrength = getPasswordStrength(form.values.password);
@@ -118,7 +127,7 @@ export function RegisterPage() {
             type="email"
             required
             {...form.getInputProps('email')}
-            disabled={registerMutation.isPending}
+            disabled={isSubmitting}
             autoComplete="email"
             aria-label="Email"
             classNames={{ input: styles.input }}
@@ -132,7 +141,7 @@ export function RegisterPage() {
               leftSection={<IconLock size={18} />}
               required
               {...form.getInputProps('password')}
-              disabled={registerMutation.isPending}
+              disabled={isSubmitting}
               autoComplete="new-password"
               aria-label="Password"
               classNames={{ input: styles.input }}
@@ -175,13 +184,13 @@ export function RegisterPage() {
             leftSection={<IconLock size={18} />}
             required
             {...form.getInputProps('confirmPassword')}
-            disabled={registerMutation.isPending}
+            disabled={isSubmitting}
             autoComplete="new-password"
             aria-label="Confirm Password"
             classNames={{ input: styles.input }}
           />
 
-          {registerMutation.isError && (
+          {error && (
             <Alert
               icon={<IconAlertCircle size={16} />}
               title="Registration Failed"
@@ -190,7 +199,7 @@ export function RegisterPage() {
               variant="light"
               radius="md"
             >
-              {registerMutation.error?.response?.data?.error || 'Failed to create account. Please try again.'}
+              {error}
             </Alert>
           )}
 
@@ -198,7 +207,7 @@ export function RegisterPage() {
             type="submit"
             fullWidth
             size="lg"
-            loading={registerMutation.isPending}
+            loading={isSubmitting}
             aria-label="Create account"
             leftSection={<IconUserPlus size={20} />}
             className={styles.submitButton}

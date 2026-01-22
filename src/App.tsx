@@ -8,9 +8,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { theme } from './theme';
 import { queryClient } from './lib/queryClient';
 import { AuthProvider } from './contexts/AuthContext';
-import { ProtectedRoute, IdleTimeoutManager } from './components';
+import { IdleTimeoutManager } from './components';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage, RegisterPage, DashboardPage } from './pages';
+import { ProtectedLayout } from './layouts/ProtectedLayout';
 
 export default function App() {
   return (
@@ -25,24 +26,25 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
-              {/* Protected Routes */}
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <IdleTimeoutManager>
-                        <DashboardPage />
-                      </IdleTimeoutManager>
-                    </ProtectedRoute>
-                  }
-                />
+              {/* Protected Routes with Layout */}
+              <Route
+                element={
+                  <IdleTimeoutManager>
+                    <ProtectedLayout />
+                  </IdleTimeoutManager>
+                }
+              >
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/profile" element={<DashboardPage />} />
+                <Route path="/settings" element={<DashboardPage />} />
+              </Route>
 
-                {/* Default Route */}
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                
-                {/* Catch all - redirect to dashboard */}
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
+              {/* Default Route */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              
+              {/* Catch all - redirect to dashboard */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
             </AuthProvider>
           </BrowserRouter>
           <ReactQueryDevtools initialIsOpen={false} />

@@ -1,8 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { User, DecodedToken, LoginCredentials } from '../types/auth';
 import { AuthService } from '../network';
+
+interface RegisterCredentials {
+  email: string;
+  password: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
+  register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => Promise<void>;
   refreshUserData: () => void;
 }
@@ -20,7 +25,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Load user data from localStorage on mount
   useEffect(() => {
@@ -53,12 +57,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (credentials: LoginCredentials) => {
     try {
+      setIsLoading(true);
       const authData = await AuthService.login(credentials);
       
       // Store auth data
       AuthService.storeAuthData(authData);
       
-      // Update state
+      // Update state synchronously
       setUser(authData.user);
       
       // Decode token to get role
@@ -69,29 +74,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Error decoding token:', error);
       }
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Navigation will be handled by LoginPage's useEffect
     } catch (error) {
       throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (credentials: RegisterCredentials) => {
+    try {
+      setIsLoading(true);
+      const authData = await AuthService.register(credentials);
+      
+      // Store auth data
+      AuthService.storeAuthData(authData);
+      
+      // Update state synchronously
+      setUser(authData.user);
+      
+      // Decode token to get role
+      try {
+        const decoded = jwtDecode<DecodedToken>(authData.accessToken);
+        setUserRole(decoded.role);
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
+      
+      // Navigation will be handled by RegisterPage's useEffect
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = async () => {
+    // Get refresh token before clearing
     const refreshToken = localStorage.getItem('refreshToken');
     
-    if (refreshToken) {
-      await AuthService.logout(refreshToken);
-    }
-    
-    // Clear state
+    // Clear state FIRST (synchronously)
     setUser(null);
     setUserRole(null);
     
     // Clear localStorage
     AuthService.clearAuthData();
     
-    // Navigate to login
-    navigate('/login');
+    // Make API call in background (don't wait for it)
+    if (refreshToken) {
+      AuthService.logout(refreshToken).catch((error) => {
+        console.error('Logout API error:', error);
+      });
+    }
+    
+    // Don't navigate here - let the caller handle navigation
   };
 
   const refreshUserData = () => {
@@ -118,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         login,
+        register,
         logout,
         refreshUserData,
       }}

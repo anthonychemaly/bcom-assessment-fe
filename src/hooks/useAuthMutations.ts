@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { AuthService } from '../network';
 import { LoginCredentials } from '../types/auth';
+import { useAuth } from '../contexts/AuthContext';
 import { AxiosError } from 'axios';
 
 interface ApiError {
@@ -15,7 +16,6 @@ interface RegisterCredentials {
 }
 
 export function useLogin() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -34,8 +34,7 @@ export function useLogin() {
         color: 'green',
       });
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Don't navigate here - let AuthContext handle it
     },
     onError: (error: AxiosError<ApiError>) => {
       const message = error.response?.data?.error || 'Login failed. Please try again.';
@@ -49,7 +48,6 @@ export function useLogin() {
 }
 
 export function useRegister() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -68,8 +66,7 @@ export function useRegister() {
         color: 'green',
       });
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Don't navigate here - let AuthContext handle it
     },
     onError: (error: AxiosError<ApiError>) => {
       const message = error.response?.data?.error || 'Registration failed. Please try again.';
@@ -85,24 +82,21 @@ export function useRegister() {
 export function useLogout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { logout } = useAuth();
 
   return useMutation({
     mutationFn: async () => {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (refreshToken) {
-        await AuthService.logout(refreshToken);
-      }
-    },
-    onSettled: () => {
-      // Clear auth data regardless of success/failure
-      AuthService.clearAuthData();
+      // Use AuthContext's logout which clears state and localStorage
+      await logout();
       
       // Clear all queries
       queryClient.clear();
-      
+    },
+    onSettled: () => {
       // Navigate to login
-      navigate('/login');
+      navigate('/login', { replace: true });
       
+      // Show notification
       notifications.show({
         title: 'Logged Out',
         message: 'You have been successfully logged out.',

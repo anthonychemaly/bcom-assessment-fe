@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   TextInput,
@@ -14,8 +14,7 @@ import {
 import { useForm } from '@mantine/form';
 import * as Yup from 'yup';
 import { IconAlertCircle, IconLogin, IconLock, IconMail } from '@tabler/icons-react';
-import { useLogin } from '../../hooks';
-import { AuthService } from '../../network';
+import { useAuth } from '../../contexts/AuthContext';
 import { AuthLayout } from '../../layouts';
 import styles from './styles.module.scss';
 
@@ -29,15 +28,15 @@ const loginSchema = Yup.object({
 });
 
 export function LoginPage() {
+  const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-  const loginMutation = useLogin();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (AuthService.isAuthenticated()) {
-      navigate('/dashboard');
+    if (!isLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
 
   const form = useForm({
     initialValues: {
@@ -63,8 +62,19 @@ export function LoginPage() {
     },
   });
 
-  const handleSubmit = form.onSubmit((values) => {
-    loginMutation.mutate(values);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = form.onSubmit(async (values) => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await login(values);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Invalid email or password');
+    } finally {
+      setIsSubmitting(false);
+    }
   });
 
   return (
@@ -79,7 +89,7 @@ export function LoginPage() {
             leftSection={<IconMail size={18} />}
             required
             {...form.getInputProps('email')}
-            disabled={loginMutation.isPending}
+            disabled={isSubmitting}
             autoComplete="email"
             aria-label="Email"
             classNames={{ input: styles.input }}
@@ -92,13 +102,13 @@ export function LoginPage() {
             leftSection={<IconLock size={18} />}
             required
             {...form.getInputProps('password')}
-            disabled={loginMutation.isPending}
+            disabled={isSubmitting}
             autoComplete="current-password"
             aria-label="Password"
             classNames={{ input: styles.input }}
           />
 
-          {loginMutation.isError && (
+          {error && (
             <Alert
               icon={<IconAlertCircle size={16} />}
               title="Login Failed"
@@ -107,7 +117,7 @@ export function LoginPage() {
               variant="light"
               radius="md"
             >
-              {loginMutation.error?.response?.data?.error || 'Invalid email or password'}
+              {error}
             </Alert>
           )}
 
@@ -115,7 +125,7 @@ export function LoginPage() {
             type="submit"
             fullWidth
             size="lg"
-            loading={loginMutation.isPending}
+            loading={isSubmitting}
             aria-label="Login"
             leftSection={<IconLogin size={20} />}
             className={styles.submitButton}
