@@ -1,0 +1,37 @@
+.modalHeader {
+  background: var(--mantine-color-red-0);
+  border-bottom: 1px solid var(--mantine-color-red-2);
+}
+
+.modalTitle {
+  color: var(--mantine-color-red-7);
+  font-weight: 600;
+}
+
+.iconWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.icon {
+  color: var(--mantine-color-red-6);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.progress {
+  margin: 0.5rem 0;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}

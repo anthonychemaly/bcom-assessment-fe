@@ -1,0 +1,20 @@
+.pageWrapper {
+  min-height: 100vh;
+  background: var(--mantine-color-gray-0);
+  padding: 2rem 0;
+}
+
+.container {
+  padding: 1rem;
+}
+
+.userCard {
+  background: linear-gradient(135deg, var(--mantine-color-blue-0) 0%, var(--mantine-color-cyan-0) 100%);
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
