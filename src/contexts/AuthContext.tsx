@@ -56,57 +56,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
+    // Don't set isLoading here - let Formik handle the submission state
+    // isLoading is only for initial app load
+    const authData = await AuthService.login(credentials);
+    
+    // Store auth data
+    AuthService.storeAuthData(authData);
+    
+    // Update state synchronously
+    setUser(authData.user);
+    
+    // Decode token to get role
     try {
-      setIsLoading(true);
-      const authData = await AuthService.login(credentials);
-      
-      // Store auth data
-      AuthService.storeAuthData(authData);
-      
-      // Update state synchronously
-      setUser(authData.user);
-      
-      // Decode token to get role
-      try {
-        const decoded = jwtDecode<DecodedToken>(authData.accessToken);
-        setUserRole(decoded.role);
-      } catch (error) {
-        console.error('Error decoding token:', error);
-      }
-      
-      // Navigation will be handled by LoginPage's useEffect
+      const decoded = jwtDecode<DecodedToken>(authData.accessToken);
+      setUserRole(decoded.role);
     } catch (error) {
-      throw error;
-    } finally {
-      setIsLoading(false);
+      console.error('Error decoding token:', error);
     }
+    
+    // Navigation will be handled by LoginPage's useEffect
   };
 
   const register = async (credentials: RegisterCredentials) => {
+    // Don't set isLoading here - let Formik handle the submission state
+    // isLoading is only for initial app load
+    const authData = await AuthService.register(credentials);
+    
+    // Store auth data
+    AuthService.storeAuthData(authData);
+    
+    // Update state synchronously
+    setUser(authData.user);
+    
+    // Decode token to get role
     try {
-      setIsLoading(true);
-      const authData = await AuthService.register(credentials);
-      
-      // Store auth data
-      AuthService.storeAuthData(authData);
-      
-      // Update state synchronously
-      setUser(authData.user);
-      
-      // Decode token to get role
-      try {
-        const decoded = jwtDecode<DecodedToken>(authData.accessToken);
-        setUserRole(decoded.role);
-      } catch (error) {
-        console.error('Error decoding token:', error);
-      }
-      
-      // Navigation will be handled by RegisterPage's useEffect
+      const decoded = jwtDecode<DecodedToken>(authData.accessToken);
+      setUserRole(decoded.role);
     } catch (error) {
-      throw error;
-    } finally {
-      setIsLoading(false);
+      console.error('Error decoding token:', error);
     }
+    
+    // Navigation will be handled by RegisterPage's useEffect
   };
 
   const logout = async () => {

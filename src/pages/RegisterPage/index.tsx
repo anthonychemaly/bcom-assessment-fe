@@ -12,7 +12,7 @@ import {
   Divider,
   Progress,
 } from '@mantine/core';
-import { useForm } from '@mantine/form';
+import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
   IconAlertCircle,
@@ -57,48 +57,29 @@ function getPasswordStrength(password: string): { strength: number; label: strin
 
 export function RegisterPage() {
   const { register } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const form = useForm({
+  const formik = useFormik({
     initialValues: {
       email: '',
       password: '',
       confirmPassword: '',
     },
-    validate: (values) => {
+    validationSchema: registerSchema,
+    onSubmit: async (values) => {
+      const { confirmPassword, ...registerData } = values;
+      setError(null);
       try {
-        registerSchema.validateSync(values, { abortEarly: false });
-        return {};
-      } catch (error) {
-        if (error instanceof Yup.ValidationError) {
-          const errors: Record<string, string> = {};
-          error.inner.forEach((err) => {
-            if (err.path) {
-              errors[err.path] = err.message;
-            }
-          });
-          return errors;
-        }
-        return {};
+        await register(registerData);
+      } catch (err: any) {
+        // Use the server's error message if available, otherwise use a generic message
+        const errorMessage = err?.response?.data?.error || err?.response?.data?.message || 'Failed to create account. Please try again.';
+        setError(errorMessage);
       }
     },
   });
 
-  const handleSubmit = form.onSubmit(async (values) => {
-    const { confirmPassword, ...registerData } = values;
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await register(registerData);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Failed to create account. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  });
-
-  const passwordStrength = getPasswordStrength(form.values.password);
+  const passwordStrength = getPasswordStrength(formik.values.password);
 
   const passwordRequirements = [
     { regex: /.{6,}/, label: 'At least 6 characters' },
@@ -109,7 +90,7 @@ export function RegisterPage() {
 
   return (
     <AuthLayout title="Create Account" subtitle="Join us today and get started">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={formik.handleSubmit}>
         <Stack gap="lg">
           <TextInput
             label="Email"
@@ -118,8 +99,12 @@ export function RegisterPage() {
             leftSection={<IconMail size={18} />}
             type="email"
             required
-            {...form.getInputProps('email')}
-            disabled={isSubmitting}
+            name="email"
+            value={formik.values.email}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.email && formik.errors.email}
+            disabled={formik.isSubmitting}
             autoComplete="email"
             aria-label="Email"
             classNames={{ input: styles.input }}
@@ -132,13 +117,17 @@ export function RegisterPage() {
               size="md"
               leftSection={<IconLock size={18} />}
               required
-              {...form.getInputProps('password')}
-              disabled={isSubmitting}
+              name="password"
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.password && formik.errors.password}
+              disabled={formik.isSubmitting}
               autoComplete="new-password"
               aria-label="Password"
               classNames={{ input: styles.input }}
             />
-            {form.values.password && (
+            {formik.values.password && (
               <Box mt="xs">
                 <Progress
                   value={passwordStrength.strength}
@@ -152,7 +141,7 @@ export function RegisterPage() {
                 </Text>
                 <Stack gap={4} mt="xs">
                   {passwordRequirements.map((req, index) => {
-                    const meets = req.regex.test(form.values.password);
+                    const meets = req.regex.test(formik.values.password);
                     return (
                       <Text
                         key={index}
@@ -175,8 +164,12 @@ export function RegisterPage() {
             size="md"
             leftSection={<IconLock size={18} />}
             required
-            {...form.getInputProps('confirmPassword')}
-            disabled={isSubmitting}
+            name="confirmPassword"
+            value={formik.values.confirmPassword}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.confirmPassword && formik.errors.confirmPassword}
+            disabled={formik.isSubmitting}
             autoComplete="new-password"
             aria-label="Confirm Password"
             classNames={{ input: styles.input }}
@@ -199,7 +192,7 @@ export function RegisterPage() {
             type="submit"
             fullWidth
             size="lg"
-            loading={isSubmitting}
+            loading={formik.isSubmitting}
             aria-label="Create account"
             leftSection={<IconUserPlus size={20} />}
             className={styles.submitButton}

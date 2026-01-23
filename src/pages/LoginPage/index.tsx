@@ -11,7 +11,7 @@ import {
   Divider,
   Text,
 } from '@mantine/core';
-import { useForm } from '@mantine/form';
+import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { IconAlertCircle, IconLogin, IconLock, IconMail } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,49 +29,33 @@ const loginSchema = Yup.object({
 
 export function LoginPage() {
   const { login } = useAuth();
+  const [error, setError] = useState<string | null>(null);
 
-  const form = useForm({
+  const formik = useFormik({
     initialValues: {
       email: '',
       password: '',
     },
-    validate: (values) => {
+    validationSchema: loginSchema,
+    onSubmit: async (values) => {
+      setError(null);
       try {
-        loginSchema.validateSync(values, { abortEarly: false });
-        return {};
-      } catch (error) {
-        if (error instanceof Yup.ValidationError) {
-          const errors: Record<string, string> = {};
-          error.inner.forEach((err) => {
-            if (err.path) {
-              errors[err.path] = err.message;
-            }
-          });
-          return errors;
+        await login(values);
+      } catch (err: any) {
+        // For 401 errors, always show "Invalid email or password"
+        if (err?.response?.status === 401) {
+          setError('Invalid email or password');
+        } else {
+          // For other errors, use the server message or a generic error
+          setError(err?.response?.data?.error || 'An error occurred. Please try again.');
         }
-        return {};
       }
     },
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = form.onSubmit(async (values) => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await login(values);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Invalid email or password');
-    } finally {
-      setIsSubmitting(false);
-    }
-  });
-
   return (
     <AuthLayout title="Welcome Back" subtitle="Sign in to your account to continue">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={formik.handleSubmit}>
         <Stack gap="lg">
           <TextInput
             label="Email"
@@ -80,8 +64,12 @@ export function LoginPage() {
             type="email"
             leftSection={<IconMail size={18} />}
             required
-            {...form.getInputProps('email')}
-            disabled={isSubmitting}
+            name="email"
+            value={formik.values.email}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.email && formik.errors.email}
+            disabled={formik.isSubmitting}
             autoComplete="email"
             aria-label="Email"
             classNames={{ input: styles.input }}
@@ -93,8 +81,12 @@ export function LoginPage() {
             size="md"
             leftSection={<IconLock size={18} />}
             required
-            {...form.getInputProps('password')}
-            disabled={isSubmitting}
+            name="password"
+            value={formik.values.password}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.password && formik.errors.password}
+            disabled={formik.isSubmitting}
             autoComplete="current-password"
             aria-label="Password"
             classNames={{ input: styles.input }}
@@ -117,7 +109,7 @@ export function LoginPage() {
             type="submit"
             fullWidth
             size="lg"
-            loading={isSubmitting}
+            loading={formik.isSubmitting}
             aria-label="Login"
             leftSection={<IconLogin size={20} />}
             className={styles.submitButton}
