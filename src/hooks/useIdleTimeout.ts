@@ -22,6 +22,15 @@ interface UseIdleTimeoutReturn {
   resetTimer: () => void;
 }
 
+/**
+ * Custom hook to track user idle time and trigger warnings/logout
+ * 
+ * Optimization Strategy:
+ * - Uses refs to prevent re-initialization when state/callbacks change
+ * - Event listeners are bound once on mount, not on every state change
+ * - Dynamically calculates remaining time based on timer configuration
+ * - Throttles activity detection to avoid excessive resets
+ */
 export function useIdleTimeout({
   warningTime = 2 * 60 * 1000, // 2 minutes
   expiringTime = 3 * 60 * 1000, // 3 minutes
@@ -34,6 +43,21 @@ export function useIdleTimeout({
   const timeoutRef = useRef<number>(0);
   const countdownRef = useRef<number>(0);
   const lastActivityRef = useRef<number>(Date.now());
+  
+  // Optimization: Use refs to prevent unnecessary re-renders and re-initializations
+  // - idleStateRef: Prevents event listeners from re-binding on state changes
+  // - onLogoutRef: Prevents resetTimer from changing when parent component re-renders
+  const idleStateRef = useRef<IdleState>(IdleState.ACTIVE);
+  const onLogoutRef = useRef(onLogout);
+  
+  // Keep refs synchronized with latest values
+  useEffect(() => {
+    idleStateRef.current = idleState;
+  }, [idleState]);
+  
+  useEffect(() => {
+    onLogoutRef.current = onLogout;
+  }, [onLogout]);
 
   // Reset the idle timer
   const resetTimer = useCallback(() => {
@@ -49,10 +73,11 @@ export function useIdleTimeout({
       window.clearInterval(countdownRef.current);
     }
 
-    // Set warning timer (2 minutes)
+    // Set warning timer
     timeoutRef.current = window.setTimeout(() => {
+      const timeUntilExpiring = Math.ceil((expiringTime - warningTime) / 1000);
       setIdleState(IdleState.WARNING);
-      setRemainingTime(60); // 60 seconds remaining
+      setRemainingTime(timeUntilExpiring);
       
       // Start countdown
       countdownRef.current = window.setInterval(() => {
@@ -67,10 +92,11 @@ export function useIdleTimeout({
         });
       }, 1000);
 
-      // Set expiring timer (3 minutes from start)
+      // Set expiring timer
       timeoutRef.current = window.setTimeout(() => {
+        const timeUntilLogout = Math.ceil((logoutTime - expiringTime) / 1000);
         setIdleState(IdleState.EXPIRING);
-        setRemainingTime(30); // 30 seconds remaining
+        setRemainingTime(timeUntilLogout);
         
         if (countdownRef.current) {
           window.clearInterval(countdownRef.current);
@@ -89,17 +115,17 @@ export function useIdleTimeout({
           });
         }, 1000);
 
-        // Set logout timer (5 minutes from start)
+        // Set logout timer
         timeoutRef.current = window.setTimeout(() => {
           setIdleState(IdleState.EXPIRED);
           if (countdownRef.current) {
             window.clearInterval(countdownRef.current);
           }
-          onLogout();
+          onLogoutRef.current();
         }, logoutTime - expiringTime);
       }, expiringTime - warningTime);
     }, warningTime);
-  }, [warningTime, expiringTime, logoutTime, onLogout]);
+  }, [warningTime, expiringTime, logoutTime]);
 
   // Extend session by pinging the API
   const extendSession = useCallback(async () => {
@@ -112,13 +138,13 @@ export function useIdleTimeout({
     }
   }, [resetTimer]);
 
-  // Track user activity
+  // Track user activity - initialize once
   useEffect(() => {
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
 
     const handleActivity = () => {
-      // Only reset if in active state or warning state
-      if (idleState === IdleState.ACTIVE || idleState === IdleState.WARNING) {
+      // Only reset if in active state or warning state (use ref to avoid re-initialization)
+      if (idleStateRef.current === IdleState.ACTIVE || idleStateRef.current === IdleState.WARNING) {
         // Throttle resets to avoid too many calls (reset at most once per second)
         const now = Date.now();
         if (now - lastActivityRef.current > 1000) {
@@ -145,7 +171,8 @@ export function useIdleTimeout({
         window.clearInterval(countdownRef.current);
       }
     };
-  }, [resetTimer, idleState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     idleState,

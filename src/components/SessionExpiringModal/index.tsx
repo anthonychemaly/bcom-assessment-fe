@@ -1,5 +1,6 @@
 import { Modal, Text, Button, Group, Stack, Progress } from '@mantine/core';
 import { IconClock } from '@tabler/icons-react';
+import { useRef, useEffect } from 'react';
 import styles from './styles.module.scss';
 
 interface SessionExpiringModalProps {
@@ -15,7 +16,21 @@ export function SessionExpiringModal({
   onExtend,
   onLogout,
 }: SessionExpiringModalProps) {
-  const progress = (remainingTime / 30) * 100;
+  const initialTimeRef = useRef<number>(0);
+  
+  // Capture initial time when modal first opens
+  useEffect(() => {
+    if (isOpen && initialTimeRef.current === 0) {
+      initialTimeRef.current = remainingTime;
+    } else if (!isOpen) {
+      initialTimeRef.current = 0;
+    }
+  }, [isOpen, remainingTime]);
+  
+  // Calculate progress based on initial time
+  const progress = initialTimeRef.current > 0 
+    ? Math.max(0, Math.min(100, (remainingTime / initialTimeRef.current) * 100))
+    : 100;
 
   return (
     <Modal

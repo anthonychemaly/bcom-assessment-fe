@@ -13,9 +13,9 @@ export function IdleTimeoutManager({ children }: IdleTimeoutManagerProps) {
   const extendSessionMutation = useExtendSession();
 
   const { idleState, remainingTime, extendSession, resetTimer } = useIdleTimeout({
-    warningTime: 2 * 60 * 1000, // 2 minutes
-    expiringTime: 3 * 60 * 1000, // 3 minutes
-    logoutTime: 5 * 60 * 1000, // 5 minutes
+    warningTime: 0.25 * 60 * 1000, // 2 minutes
+    expiringTime: 0.5 * 60 * 1000, // 3 minutes
+    logoutTime: 1 * 60 * 1000, // 5 minutes
     onLogout: () => logoutMutation.mutate(),
   });
 
