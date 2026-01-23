@@ -106,7 +106,7 @@ export function useLogout() {
   });
 }
 
-export function useExtendSession() {
+export function useExtendSession({ onSuccess }: { onSuccess: () => void }) {
   return useMutation({
     mutationFn: () => AuthService.ping(),
     onSuccess: () => {
@@ -116,6 +116,7 @@ export function useExtendSession() {
         color: 'green',
         autoClose: 3000,
       });
+      onSuccess?.();
     },
     onError: (error: AxiosError<ApiError>) => {
       const message = error.response?.data?.error || 'Failed to extend session.';

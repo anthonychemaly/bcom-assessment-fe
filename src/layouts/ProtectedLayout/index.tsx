@@ -3,8 +3,6 @@ import { useDisclosure } from '@mantine/hooks';
 import { Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import {
   IconHome,
-  IconUser,
-  IconSettings,
   IconLogout,
 } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';

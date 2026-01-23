@@ -10,18 +10,18 @@ interface IdleTimeoutManagerProps {
 
 export function IdleTimeoutManager({ children }: IdleTimeoutManagerProps) {
   const logoutMutation = useLogout();
-  const extendSessionMutation = useExtendSession();
 
-  const { idleState, remainingTime, extendSession, resetTimer } = useIdleTimeout({
+  const { idleState, remainingTime, resetTimer } = useIdleTimeout({
     warningTime: 2 * 60 * 1000, // 2 minutes
     expiringTime: 3 * 60 * 1000, // 3 minutes
     logoutTime: 5 * 60 * 1000, // 5 minutes
     onLogout: () => logoutMutation.mutate(),
   });
 
+  const extendSessionMutation = useExtendSession({ onSuccess: () => resetTimer() });
+
   const handleExtend = async () => {
     try {
-      await extendSession();
       extendSessionMutation.mutate();
     } catch (error) {
       console.error('Failed to extend session:', error);

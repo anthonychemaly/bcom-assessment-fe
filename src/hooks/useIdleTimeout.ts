@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { AuthService } from '../network';
 
 export enum IdleState {
   ACTIVE = 'active',
@@ -18,7 +17,6 @@ interface UseIdleTimeoutOptions {
 interface UseIdleTimeoutReturn {
   idleState: IdleState;
   remainingTime: number;
-  extendSession: () => Promise<void>;
   resetTimer: () => void;
 }
 
@@ -146,17 +144,6 @@ export function useIdleTimeout({
     }, warningTime);
   }, [warningTime, expiringTime, logoutTime]);
 
-  // Extend session by pinging the API
-  const extendSession = useCallback(async () => {
-    try {
-      await AuthService.ping();
-      resetTimer();
-    } catch (error) {
-      console.error('Failed to extend session:', error);
-      throw error;
-    }
-  }, [resetTimer]);
-
   // Track user activity - initialize once
   useEffect(() => {
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
@@ -203,7 +190,6 @@ export function useIdleTimeout({
   return {
     idleState,
     remainingTime,
-    extendSession,
     resetTimer,
   };
 }
