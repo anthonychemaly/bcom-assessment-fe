@@ -40,7 +40,10 @@ export function useIdleTimeout({
   const [idleState, setIdleState] = useState<IdleState>(IdleState.ACTIVE);
   const [remainingTime, setRemainingTime] = useState(0);
   
-  const timeoutRef = useRef<number>(0);
+  // Use separate refs for each timer level to prevent conflicts
+  const warningTimeoutRef = useRef<number>(0);
+  const expiringTimeoutRef = useRef<number>(0);
+  const logoutTimeoutRef = useRef<number>(0);
   const countdownRef = useRef<number>(0);
   const lastActivityRef = useRef<number>(Date.now());
   
@@ -65,61 +68,88 @@ export function useIdleTimeout({
     setIdleState(IdleState.ACTIVE);
     setRemainingTime(0);
 
-    // Clear existing timers
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
+    // Clear all existing timers
+    if (warningTimeoutRef.current) {
+      window.clearTimeout(warningTimeoutRef.current);
+    }
+    if (expiringTimeoutRef.current) {
+      window.clearTimeout(expiringTimeoutRef.current);
+    }
+    if (logoutTimeoutRef.current) {
+      window.clearTimeout(logoutTimeoutRef.current);
     }
     if (countdownRef.current) {
       window.clearInterval(countdownRef.current);
     }
 
     // Set warning timer
-    timeoutRef.current = window.setTimeout(() => {
+    warningTimeoutRef.current = window.setTimeout(() => {
       const timeUntilExpiring = Math.ceil((expiringTime - warningTime) / 1000);
+      console.log('[IdleTimeout] ⚠️ WARNING state - setting remainingTime to:', timeUntilExpiring);
       setIdleState(IdleState.WARNING);
       setRemainingTime(timeUntilExpiring);
       
       // Start countdown
+      console.log('[IdleTimeout] Starting WARNING countdown interval');
       countdownRef.current = window.setInterval(() => {
         setRemainingTime((prev) => {
+          console.log('[IdleTimeout] WARNING countdown:', prev, '→', prev - 1);
           if (prev <= 1) {
             if (countdownRef.current) {
               window.clearInterval(countdownRef.current);
+              countdownRef.current = 0;
             }
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
+      console.log('[IdleTimeout] WARNING countdown interval ID:', countdownRef.current);
 
       // Set expiring timer
-      timeoutRef.current = window.setTimeout(() => {
+      expiringTimeoutRef.current = window.setTimeout(() => {
         const timeUntilLogout = Math.ceil((logoutTime - expiringTime) / 1000);
+        console.log('[IdleTimeout] 🚨 EXPIRING state - setting remainingTime to:', timeUntilLogout);
+        
+        // CRITICAL: Clear the old countdown BEFORE doing anything else
+        const oldCountdown = countdownRef.current;
+        if (oldCountdown) {
+          console.log('[IdleTimeout] Clearing previous countdown interval:', oldCountdown);
+          window.clearInterval(oldCountdown);
+          countdownRef.current = 0; // Reset to 0 immediately
+        }
+        
+        // Set state after clearing
         setIdleState(IdleState.EXPIRING);
         setRemainingTime(timeUntilLogout);
-        
-        if (countdownRef.current) {
-          window.clearInterval(countdownRef.current);
-        }
 
-        // Start countdown
-        countdownRef.current = window.setInterval(() => {
-          setRemainingTime((prev) => {
-            if (prev <= 1) {
-              if (countdownRef.current) {
-                window.clearInterval(countdownRef.current);
+        // Start new countdown for expiring state with slight delay to ensure state is updated
+        setTimeout(() => {
+          console.log('[IdleTimeout] Starting new countdown interval for EXPIRING');
+          countdownRef.current = window.setInterval(() => {
+            console.log('[IdleTimeout] EXPIRING Countdown tick');
+            setRemainingTime((prev) => {
+              console.log('[IdleTimeout] EXPIRING remainingTime:', prev, '→', prev - 1);
+              if (prev <= 1) {
+                if (countdownRef.current) {
+                  window.clearInterval(countdownRef.current);
+                  countdownRef.current = 0;
+                }
+                return 0;
               }
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+              return prev - 1;
+            });
+          }, 1000);
+          console.log('[IdleTimeout] New countdown interval ID:', countdownRef.current);
+        }, 10);
 
         // Set logout timer
-        timeoutRef.current = window.setTimeout(() => {
+        logoutTimeoutRef.current = window.setTimeout(() => {
+          console.log('[IdleTimeout] ❌ EXPIRED - Auto logout');
           setIdleState(IdleState.EXPIRED);
           if (countdownRef.current) {
             window.clearInterval(countdownRef.current);
+            countdownRef.current = 0;
           }
           onLogoutRef.current();
         }, logoutTime - expiringTime);
@@ -164,8 +194,15 @@ export function useIdleTimeout({
       events.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
+      // Clear all timers on cleanup
+      if (warningTimeoutRef.current) {
+        window.clearTimeout(warningTimeoutRef.current);
+      }
+      if (expiringTimeoutRef.current) {
+        window.clearTimeout(expiringTimeoutRef.current);
+      }
+      if (logoutTimeoutRef.current) {
+        window.clearTimeout(logoutTimeoutRef.current);
       }
       if (countdownRef.current) {
         window.clearInterval(countdownRef.current);
