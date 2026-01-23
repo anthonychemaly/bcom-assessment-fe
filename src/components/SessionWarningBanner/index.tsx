@@ -13,6 +13,7 @@ export function SessionWarningBanner({ remainingTime, onExtend }: SessionWarning
       icon={<IconAlertTriangle size={16} />}
       title="Session Inactivity Warning"
       color="yellow"
+      variant='filled'
       className={styles.banner}
       withCloseButton={false}
     >
