@@ -35,8 +35,6 @@ export default function App() {
                 }
               >
                 <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/profile" element={<DashboardPage />} />
-                <Route path="/settings" element={<DashboardPage />} />
               </Route>
 
               {/* Default Route */}

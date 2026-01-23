@@ -66,22 +66,6 @@ export function ProtectedLayout() {
             }}
           />
           <NavLink
-            label="Profile"
-            leftSection={<IconUser size={20} />}
-            onClick={() => {
-              navigate('/profile');
-              if (opened) toggle();
-            }}
-          />
-          <NavLink
-            label="Settings"
-            leftSection={<IconSettings size={20} />}
-            onClick={() => {
-              navigate('/settings');
-              if (opened) toggle();
-            }}
-          />
-          <NavLink
             label="Logout"
             leftSection={<IconLogout size={20} />}
             onClick={handleLogout}
