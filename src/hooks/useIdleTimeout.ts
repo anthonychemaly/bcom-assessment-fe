@@ -85,15 +85,12 @@ export function useIdleTimeout({
     // Set warning timer
     warningTimeoutRef.current = window.setTimeout(() => {
       const timeUntilExpiring = Math.ceil((expiringTime - warningTime) / 1000);
-      console.log('[IdleTimeout] ⚠️ WARNING state - setting remainingTime to:', timeUntilExpiring);
       setIdleState(IdleState.WARNING);
       setRemainingTime(timeUntilExpiring);
       
       // Start countdown
-      console.log('[IdleTimeout] Starting WARNING countdown interval');
       countdownRef.current = window.setInterval(() => {
         setRemainingTime((prev) => {
-          console.log('[IdleTimeout] WARNING countdown:', prev, '→', prev - 1);
           if (prev <= 1) {
             if (countdownRef.current) {
               window.clearInterval(countdownRef.current);
@@ -104,32 +101,26 @@ export function useIdleTimeout({
           return prev - 1;
         });
       }, 1000);
-      console.log('[IdleTimeout] WARNING countdown interval ID:', countdownRef.current);
 
       // Set expiring timer
       expiringTimeoutRef.current = window.setTimeout(() => {
         const timeUntilLogout = Math.ceil((logoutTime - expiringTime) / 1000);
-        console.log('[IdleTimeout] 🚨 EXPIRING state - setting remainingTime to:', timeUntilLogout);
         
-        // CRITICAL: Clear the old countdown BEFORE doing anything else
+        // Clear the old countdown before starting new one
         const oldCountdown = countdownRef.current;
         if (oldCountdown) {
-          console.log('[IdleTimeout] Clearing previous countdown interval:', oldCountdown);
           window.clearInterval(oldCountdown);
-          countdownRef.current = 0; // Reset to 0 immediately
+          countdownRef.current = 0;
         }
         
         // Set state after clearing
         setIdleState(IdleState.EXPIRING);
         setRemainingTime(timeUntilLogout);
 
-        // Start new countdown for expiring state with slight delay to ensure state is updated
+        // Start new countdown with slight delay to ensure state is updated
         setTimeout(() => {
-          console.log('[IdleTimeout] Starting new countdown interval for EXPIRING');
           countdownRef.current = window.setInterval(() => {
-            console.log('[IdleTimeout] EXPIRING Countdown tick');
             setRemainingTime((prev) => {
-              console.log('[IdleTimeout] EXPIRING remainingTime:', prev, '→', prev - 1);
               if (prev <= 1) {
                 if (countdownRef.current) {
                   window.clearInterval(countdownRef.current);
@@ -140,12 +131,10 @@ export function useIdleTimeout({
               return prev - 1;
             });
           }, 1000);
-          console.log('[IdleTimeout] New countdown interval ID:', countdownRef.current);
         }, 10);
 
         // Set logout timer
         logoutTimeoutRef.current = window.setTimeout(() => {
-          console.log('[IdleTimeout] ❌ EXPIRED - Auto logout');
           setIdleState(IdleState.EXPIRED);
           if (countdownRef.current) {
             window.clearInterval(countdownRef.current);
