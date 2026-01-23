@@ -1,7 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { AuthResponse } from '../types/auth';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 // Create axios instance
 export const axiosInstance = axios.create({
